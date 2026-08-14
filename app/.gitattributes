@@ -1,7 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# Declare files that will always have LF line endings on checkout.
+# Declare files that will always have LF line endings on checkout
 *.kt text eol=lf
 *.kts text eol=lf
 *.xml text eol=lf
@@ -9,8 +9,10 @@
 *.md text eol=lf
 *.json text eol=lf
 *.properties text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
 
-# Denote all files that are truly binary and must not be modified by Git
+# Explicitly mark binary files so Git never modifies CRLF/LF or corrupts them
 *.jar binary
 *.png binary
 *.webp binary
