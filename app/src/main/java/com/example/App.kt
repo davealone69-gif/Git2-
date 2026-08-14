@@ -1,0 +1,10 @@
+package com.example
+
+import android.app.Application
+
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        // OMERA System Initialization
+    }
+}

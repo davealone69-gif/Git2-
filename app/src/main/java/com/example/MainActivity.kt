@@ -50,20 +50,18 @@ import coil.compose.AsyncImage
 import com.example.data.*
 import com.example.ui.AuthState
 import com.example.ui.GitHubViewModel
+import com.example.ui.MainScreen
 import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
-    private val viewModel: GitHubViewModel by viewModels()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
         setContent {
-            MyApplicationTheme {
-                AppBuilderApp(viewModel = viewModel)
+            Surface(color = MaterialTheme.colorScheme.background) {
+                MainScreen()
             }
         }
     }
