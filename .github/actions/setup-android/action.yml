@@ -1,5 +1,5 @@
 name: 'Setup Android Environment'
-description: 'Configures JDK 17, Android SDK, and ensures Gradle wrapper is ready'
+description: 'Configures JDK 17, Android SDK, and ensures a valid Gradle wrapper'
 
 runs:
   using: 'composite'
@@ -13,9 +13,31 @@ runs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Grant execute permission for gradlew
+    - name: Fix / regenerate Gradle Wrapper (jar may be corrupt in repo)
       shell: bash
-      run: chmod +x gradlew
+      run: |
+        # Download a known-good gradle-wrapper.jar for 9.7.0
+        mkdir -p gradle/wrapper
+        curl -sL -o gradle/wrapper/gradle-wrapper.jar \
+          https://raw.githubusercontent.com/gradle/gradle/v9.7.0/gradle/wrapper/gradle-wrapper.jar
+        # Ensure properties point to 9.7.0
+        cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+        distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip
+        networkTimeout=10000
+        validateDistributionUrl=true
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=wrapper/dists
+        EOF
+        # Make sure gradlew scripts are executable and present (they should be)
+        chmod +x gradlew || true
+        # If gradlew is missing or broken, regenerate fully with a temp gradle
+        if ! head -1 gradlew | grep -q bash; then
+          curl -sL https://services.gradle.org/distributions/gradle-9.7.0-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          /tmp/gradle-9.7.0/bin/gradle wrapper --gradle-version 9.7.0
+        fi
 
     - name: Decode debug keystore if present
       shell: bash
