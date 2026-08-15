@@ -1,5 +1,5 @@
 name: 'Setup Android Environment'
-description: 'Configures JDK 17, decodes debug keystore if present, and forces clean Gradle wrapper'
+description: 'Configures JDK 17, Android SDK, and ensures Gradle wrapper is ready'
 
 runs:
   using: 'composite'
@@ -10,11 +10,16 @@ runs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Regenerate Gradle Wrapper & Restore Keystore
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Grant execute permission for gradlew
+      shell: bash
+      run: chmod +x gradlew
+
+    - name: Decode debug keystore if present
       shell: bash
       run: |
         if [ -f "debug.keystore.base64" ]; then
           base64 -d debug.keystore.base64 > debug.keystore
         fi
-        gradle wrapper --gradle-version 9.7.0
-        chmod +x gradlew
