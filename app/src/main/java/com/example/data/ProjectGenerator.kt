@@ -2,7 +2,7 @@ package com.example.data
 
 data class GeneratedFile(
     val path: String,
-    val category: String, // "Android", "Workflow", "Docs", "Config"
+    val category: String,
     val content: String
 )
 
@@ -15,15 +15,21 @@ fun generateProjectFiles(
     minSdk: String
 ): List<GeneratedFile> {
     val appSlug = prompt.lowercase().replace(Regex("[^a-z0-9]"), "").take(12).ifEmpty { "myapp" }
-    
     val list = mutableListOf<GeneratedFile>()
 
-    // MainActivity
-    list.add(
-        GeneratedFile(
-            path = "app/src/main/java/com/example/MainActivity.kt",
-            category = "Android",
-            content = """
+    // GitHub-Boss merge: include the offline deterministic Kotlin generator output.
+    KotlinCodeMaker.generate(prompt, "com.example").forEach { file ->
+        list += GeneratedFile(
+            path = "app/src/main/java/com/example/${file.path}",
+            category = "Kotlin",
+            content = file.content
+        )
+    }
+
+    list += GeneratedFile(
+        path = "app/src/main/java/com/example/MainActivity.kt",
+        category = "Android",
+        content = """
 package com.example
 
 import android.os.Bundle
@@ -41,9 +47,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MainScreen()
-                }
+                Surface(modifier = Modifier.fillMaxSize()) { MainScreen() }
             }
         }
     }
@@ -56,26 +60,18 @@ fun MainScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "Generated App: $prompt",
-            style = MaterialTheme.typography.titleMedium
-        )
+        Text("Generated App: $prompt", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { /* Action */ }) {
-            Text("Interactive Action")
-        }
+        Button(onClick = {}) { Text("Interactive Action") }
     }
 }
-            """.trimIndent()
-        )
+""".trimIndent()
     )
 
-    // build.gradle.kts
-    list.add(
-        GeneratedFile(
-            path = "app/build.gradle.kts",
-            category = "Android",
-            content = """
+    list += GeneratedFile(
+        path = "app/build.gradle.kts",
+        category = "Android",
+        content = """
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -86,7 +82,6 @@ plugins {
 android {
     namespace = "com.example"
     compileSdk = 36
-
     defaultConfig {
         applicationId = "com.aistudio.$appSlug.app"
         minSdk = $minSdk
@@ -94,11 +89,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
     }
-
-    buildFeatures {
-        compose = true
-        buildConfig = true
-    }
+    buildFeatures { compose = true; buildConfig = true }
 }
 
 dependencies {
@@ -108,21 +99,16 @@ dependencies {
     ${if (includeRoom) "implementation(libs.androidx.room.runtime)\n    implementation(libs.androidx.room.ktx)" else ""}
     ${if (includeGemini) "implementation(libs.firebase.ai)" else ""}
 }
-            """.trimIndent()
-        )
+""".trimIndent()
     )
 
-    // AndroidManifest.xml
-    list.add(
-        GeneratedFile(
-            path = "app/src/main/AndroidManifest.xml",
-            category = "Android",
-            content = """
+    list += GeneratedFile(
+        path = "app/src/main/AndroidManifest.xml",
+        category = "Android",
+        content = """
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
     <uses-permission android:name="android.permission.INTERNET" />
-
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -130,145 +116,65 @@ dependencies {
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
-
 </manifest>
-            """.trimIndent()
-        )
+""".trimIndent()
     )
 
-    // Workflows
     if (includeWorkflows) {
-        list.add(
-            GeneratedFile(
-                path = ".github/workflows/build-android.yml",
-                category = "Workflow",
-                content = """
+        list += GeneratedFile(
+            path = ".github/workflows/build-android.yml",
+            category = "Workflow",
+            content = """
 name: Build & Test Android
-
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [main, develop]
   pull_request:
-    branches: [ "main" ]
-
+    branches: [main]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Grant execute permission for gradlew
-        run: |
-          if [ -f "./gradlew" ]; then
-            chmod +x gradlew
-          else
-            echo "gradlew not found, using system gradle"
-          fi
-
+          distribution: temurin
       - name: Build Debug APK
-        run: |
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --no-daemon
-          else
-            gradle assembleDebug --no-daemon
-          fi
-
+        run: gradle assembleDebug --no-daemon
       - name: Run Unit Tests
         run: gradle testDebugUnitTest --no-daemon
-
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-                """.trimIndent()
-            )
-        )
-
-        list.add(
-            GeneratedFile(
-                path = ".github/workflows/release-autotag.yml",
-                category = "Workflow",
-                content = """
-name: Auto Release & Tagging
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build Release Bundle
-        run: gradle assembleRelease --no-daemon
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: app/build/outputs/apk/release/*.apk
-          generate_release_notes: true
-                """.trimIndent()
-            )
+          path: app/build/outputs/apk/debug/*.apk
+""".trimIndent()
         )
     }
 
-    // Docs
-    list.add(
-        GeneratedFile(
-            path = "README.md",
-            category = "Docs",
-            content = """
+    list += GeneratedFile(
+        path = "README.md",
+        category = "Docs",
+        content = """
 # $prompt
 
-A modern Jetpack Compose Android application built with Material Design 3.
+Generated by the merged Git2- + GitHub-Boss builder.
 
-## Features
-- **UI Architecture**: Jetpack Compose, Material 3, ViewModel & StateFlow.
-- **Local Persistence**: ${if (includeRoom) "Room Database with Kotlin Coroutines Flow." else "In-memory state persistence."}
-- **Dependency Injection**: ${if (includeHilt) "Hilt Dependency Injection." else "Standard Constructor Injection."}
-- **CI/CD**: Fully automated GitHub Actions workflows for building, testing, and release tagging.
-
-## Setup & Build
-1. Clone the repository.
-2. Open in Android Studio Hedgehog or newer.
-3. Sync Gradle and run on device/emulator.
-            """.trimIndent()
-        )
-    )
-
-    list.add(
-        GeneratedFile(
-            path = "CHANGELOG.md",
-            category = "Docs",
-            content = """
-# Changelog
-
-## [1.0.0] - ${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())}
-### Added
-- Initial project template generation for "$prompt".
-- Jetpack Compose M3 UI baseline.
-- Automated GitHub Actions CI workflow pipeline.
-            """.trimIndent()
-        )
+Features:
+- Jetpack Compose + Material 3
+- ViewModel + StateFlow
+- Offline deterministic Kotlin generation
+- Optional Gemini code generation service
+- ${if (includeRoom) "Room database stubs" else "In-memory state"}
+- ${if (includeWorkflows) "GitHub Actions CI" else "No workflow"}
+""".trimIndent()
     )
 
     return list
