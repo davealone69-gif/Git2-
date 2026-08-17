@@ -1,5 +1,5 @@
 name: 'Setup Android Environment'
-description: 'Configures JDK 17, Android SDK, and ensures a valid Gradle wrapper'
+description: 'Configures JDK 17, Android SDK, and system Gradle 8.9 without relying on repository wrapper files'
 
 runs:
   using: 'composite'
@@ -18,33 +18,18 @@ runs:
       run: |
         yes | sdkmanager --licenses >/dev/null || true
         sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools" || \
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools" || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
-    - name: Fix / regenerate Gradle Wrapper (jar may be corrupt in repo)
+    - name: Install Gradle 8.9
       shell: bash
       run: |
-        # Download a known-good gradle-wrapper.jar for 9.7.0
-        mkdir -p gradle/wrapper
-        curl -sL -o gradle/wrapper/gradle-wrapper.jar \
-          https://raw.githubusercontent.com/gradle/gradle/v9.7.0/gradle/wrapper/gradle-wrapper.jar
-        # Ensure properties point to 9.7.0
-        cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip
-        networkTimeout=10000
-        validateDistributionUrl=true
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
-        EOF
-        # Make sure gradlew scripts are executable and present (they should be)
-        chmod +x gradlew || true
-        # If gradlew is missing or broken, regenerate fully with a temp gradle
-        if ! head -1 gradlew | grep -q bash; then
-          curl -sL https://services.gradle.org/distributions/gradle-9.7.0-bin.zip -o /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d /tmp
-          /tmp/gradle-9.7.0/bin/gradle wrapper --gradle-version 9.7.0
-        fi
+        set -euo pipefail
+        curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
+        rm -rf /opt/gradle-8.9
+        mkdir -p /opt/gradle-8.9
+        unzip -q /tmp/gradle.zip -d /opt
+        echo "/opt/gradle-8.9/bin" >> "$GITHUB_PATH"
+        /opt/gradle-8.9/bin/gradle --version
 
     - name: Decode debug keystore if present
       shell: bash
