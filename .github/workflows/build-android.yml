@@ -2,15 +2,19 @@ name: Build & Test Android
 
 on:
   push:
-    branches: [ "main", "master", "develop" ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [main, master]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    name: Build & Test Android
+    name: Build Git2 + GitHub-Boss APK
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout Repository
@@ -19,12 +23,27 @@ jobs:
       - name: Setup Android Environment
         uses: ./.github/actions/setup-android
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Verify merged sources
+        shell: bash
+        run: |
+          test -f app/src/main/java/com/example/data/KotlinCodeMaker.kt
+          test -f app/src/main/java/com/example/data/GeminiCodeService.kt
+          test -f app/src/main/java/com/example/data/ProjectGenerator.kt
 
-      - name: Upload Debug APK Artifact
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Run Unit Tests
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Locate APK
+        shell: bash
+        run: find app/build/outputs -type f -name '*.apk' -print
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: git2-github-boss-combined-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 14
