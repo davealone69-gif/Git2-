@@ -1,5 +1,5 @@
 name: 'Setup Android Environment'
-description: 'Configures JDK 17, Android SDK, and system Gradle 8.9 without relying on repository wrapper files'
+description: 'Configures JDK 17, Android SDK, and Gradle 9.3.1'
 
 runs:
   using: 'composite'
@@ -16,20 +16,21 @@ runs:
     - name: Accept Android licenses and install required packages
       shell: bash
       run: |
+        set -euo pipefail
         yes | sdkmanager --licenses >/dev/null || true
         sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools" || \
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
-    - name: Install Gradle 8.9
+    - name: Install Gradle 9.3.1
       shell: bash
       run: |
         set -euo pipefail
-        curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
-        rm -rf /opt/gradle-8.9
-        mkdir -p /opt/gradle-8.9
+        curl -fsSL https://services.gradle.org/distributions/gradle-9.3.1-bin.zip -o /tmp/gradle.zip
+        rm -rf /opt/gradle-9.3.1
+        mkdir -p /opt/gradle-9.3.1
         unzip -q /tmp/gradle.zip -d /opt
-        echo "/opt/gradle-8.9/bin" >> "$GITHUB_PATH"
-        /opt/gradle-8.9/bin/gradle --version
+        echo "/opt/gradle-9.3.1/bin" >> "$GITHUB_PATH"
+        /opt/gradle-9.3.1/bin/gradle --version
 
     - name: Decode debug keystore if present
       shell: bash
