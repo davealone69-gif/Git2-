@@ -1,0 +1,14 @@
+name: Build GitHub Boss APK (mod copy)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  reference:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reference
+        run: |
+          echo "This file is a preserved copy of the working GitHub-Boss-Pro build-apk workflow."
+          echo "Source: davealone69-gif/GitHub-Boss-Pro/.github/workflows/build-apk.yml"
+          echo "Build system: Gradle 8.9 / JDK 17 / APK build kit"
