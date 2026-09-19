@@ -8,16 +8,11 @@ class TermuxController(private val context: Context) {
     private val bashPath = "/data/data/com.termux/files/usr/bin/bash"
 
     fun isInstalled(): Boolean =
-        try {
-            context.packageManager.getPackageInfo("com.termux", 0)
-            true
-        } catch (_: PackageManager.NameNotFoundException) {
-            false
-        }
+        try { context.packageManager.getPackageInfo("com.termux", 0); true }
+        catch (_: PackageManager.NameNotFoundException) { false }
 
     fun runCommand(command: String, workDir: String? = null): Result<Unit> {
         if (!isInstalled()) return Result.failure(IllegalStateException("Termux is not installed"))
-
         return try {
             val intent = Intent().apply {
                 action = "com.termux.RUN_COMMAND"
@@ -29,16 +24,14 @@ class TermuxController(private val context: Context) {
             }
             context.startService(intent)
             Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        } catch (e: Exception) { Result.failure(e) }
     }
 
     fun startOllama(): Result<Unit> =
-        runCommand("if ! pgrep -f '(^| )ollama serve( |$)' >/dev/null 2>&1; then nohup ollama serve >/data/data/com.termux/files/home/ollama.log 2>&1 & fi")
+        runCommand("proot-distro login ubuntu -- bash -lc 'if ! pgrep -f \"ollama serve\" >/dev/null 2>&1; then nohup ollama serve >/tmp/ollama.log 2>&1 & fi'")
 
     fun ensureLocalServer(): Result<Unit> =
-        runCommand("if command -v ollama >/dev/null 2>&1; then if ! pgrep -f '(^| )ollama serve( |$)' >/dev/null 2>&1; then nohup ollama serve >/data/data/com.termux/files/home/ollama.log 2>&1 & fi; else echo 'Ollama is not installed'; exit 127; fi")
+        runCommand("proot-distro login ubuntu -- bash -lc 'command -v ollama >/dev/null 2>&1 || exit 127; if ! pgrep -f \"ollama serve\" >/dev/null 2>&1; then nohup ollama serve >/tmp/ollama.log 2>&1 & fi'")
 
     fun installUbuntu(): Result<Unit> =
         runCommand("pkg update -y && pkg install -y proot-distro wget curl tar && proot-distro install ubuntu")
@@ -49,7 +42,7 @@ class TermuxController(private val context: Context) {
         runCommand("proot-distro login ubuntu -- bash -lc 'curl -fsSL https://ollama.com/install.sh | sh'")
 
     fun pullModel(model: String = "llama3.2:1b"): Result<Unit> =
-        runCommand("ollama pull ${shellQuote(model)}")
+        runCommand("proot-distro login ubuntu -- bash -lc 'ollama pull ${shellQuote(model)}'")
 
     fun buildAndroidProject(projectPath: String): Result<Unit> =
         runCommand("cd ${shellQuote(projectPath)} && test -x ./gradlew && ./gradlew assembleDebug --no-daemon", projectPath)
