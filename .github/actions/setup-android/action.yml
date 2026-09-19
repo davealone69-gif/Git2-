@@ -10,8 +10,15 @@ runs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+    - name: Prepare Android SDK
+      shell: bash
+      run: |
+        set -euo pipefail
+        export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+        export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+        export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+        command -v sdkmanager
+        sdkmanager --version
 
     - name: Accept Android licenses and install required packages
       shell: bash
