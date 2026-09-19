@@ -56,12 +56,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val githubViewModel: GitHubViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            Surface(color = MaterialTheme.colorScheme.background) {
-                MainScreen()
+            MyApplicationTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    AppBuilderApp(githubViewModel)
+                }
             }
         }
     }
