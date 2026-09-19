@@ -34,7 +34,7 @@ class TermuxController(private val context: Context) {
         }
     }
 
-    fun startOllamaServer(): Result<Unit> =
+    fun startOllama(): Result<Unit> =
         runCommand("if ! pgrep -f '(^| )ollama serve( |$)' >/dev/null 2>&1; then nohup ollama serve >/data/data/com.termux/files/home/ollama.log 2>&1 & fi")
 
     fun ensureLocalServer(): Result<Unit> =
