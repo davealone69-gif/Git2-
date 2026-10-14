@@ -16,20 +16,15 @@ fun OllamaScreen() {
     val scope = rememberCoroutineScope()
     val ollamaClient = remember { OllamaClient() }
     var prompt by remember { mutableStateOf("") }
-    var responseText by remember { mutableStateOf("Enter prompt to generate output.") }
+    var responseText by remember { mutableStateOf("Enter a prompt to run a real Ollama generation.") }
     var serverStatus by remember { mutableStateOf("Not checked. Server health does not prove chat generation works.") }
     var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Ollama Local LLM Generator") })
-        }
+        topBar = { TopAppBar(title = { Text("Ollama Local LLM Generator") }) }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
@@ -47,50 +42,47 @@ fun OllamaScreen() {
                         scope.launch {
                             serverStatus = "Checking Ollama API..."
                             ollamaClient.health().fold(
-                                onSuccess = { serverStatus = "SERVER RESPONDS · chat completion is not verified until Generate Response succeeds." },
-                                onFailure = { serverStatus = "SERVER UNAVAILABLE · ${it.message ?: "connection failed"}" }
+                                onSuccess = {
+                                    serverStatus = "SERVER RESPONDS. Chat is unverified until Generate Response succeeds."
+                                },
+                                onFailure = {
+                                    serverStatus = "SERVER UNAVAILABLE. ${it.message ?: "Connection failed"}"
+                                }
                             )
                         }
                     },
                     modifier = Modifier.weight(1f)
                 ) { Text("Check Server") }
+
                 Button(
+                    enabled = !isLoading && prompt.isNotBlank(),
                     onClick = {
-                        if (prompt.isNotBlank()) {
                         isLoading = true
                         scope.launch {
                             val result = ollamaClient.generate(prompt)
                             isLoading = false
                             responseText = result.fold(
-                                onSuccess = { "CHAT VERIFIED · a real Ollama generation returned a non-empty response.\n\n" + it },
-                                onFailure = { "CHAT FAILED · ${it.message ?: "unknown error"}" }
+                                onSuccess = {
+                                    "CHAT VERIFIED. A real Ollama generation returned a non-empty response.\n\n" + it
+                                },
+                                onFailure = {
+                                    "CHAT FAILED. ${it.message ?: "Unknown error"}"
+                                }
                             )
                         }
-                    }
-                },
-                enabled = !isLoading && prompt.isNotBlank(),
-                modifier = Modifier.weight(1f)
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                } else {
-                    Text("Generate Response")
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    else Text("Generate Response")
                 }
             }
 
             Text("Server status: $serverStatus", style = MaterialTheme.typography.bodySmall)
-            Text("Response:", style = MaterialTheme.typography.titleMedium)
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
+            Text("Generation result:", style = MaterialTheme.typography.titleMedium)
+            Card(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState())
+                    modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())
                 ) {
                     Text(responseText, style = MaterialTheme.typography.bodyMedium)
                 }
