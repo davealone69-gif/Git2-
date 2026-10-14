@@ -13,6 +13,11 @@ class TermuxController(private val context: Context) {
 
     fun runCommand(command: String, workDir: String? = null): Result<Unit> {
         if (!isInstalled()) return Result.failure(IllegalStateException("Termux is not installed"))
+        if (context.checkSelfPermission("com.termux.permission.RUN_COMMAND") != PackageManager.PERMISSION_GRANTED) {
+            return Result.failure(IllegalStateException(
+                "Termux Run commands permission is not granted. Grant com.termux.permission.RUN_COMMAND in Android app settings."
+            ))
+        }
         return try {
             val intent = Intent().apply {
                 action = "com.termux.RUN_COMMAND"
@@ -22,16 +27,22 @@ class TermuxController(private val context: Context) {
                 putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
                 if (!workDir.isNullOrBlank()) putExtra("com.termux.RUN_COMMAND_WORKDIR", workDir)
             }
-            context.startService(intent)
-            Result.success(Unit)
+            val started = context.startService(intent)
+            if (started != null) Result.success(Unit)
+            else Result.failure(IllegalStateException(
+                "Termux did not confirm command delivery. Check allow-external-apps=true in ~/.termux/termux.properties."
+            ))
         } catch (e: Exception) { Result.failure(e) }
     }
 
     fun startOllama(): Result<Unit> =
-        runCommand("proot-distro login ubuntu -- bash -lc 'if ! pgrep -f \"ollama serve\" >/dev/null 2>&1; then nohup ollama serve >/tmp/ollama.log 2>&1 & fi'")
+        runCommand(
+            "command -v ollama >/dev/null 2>&1 || { echo 'Ollama is not installed in Termux'; exit 127; }; " +
+                "if ! curl -fsS -m 2 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then " +
+                "nohup ollama serve > \"\$HOME/ollama.log\" 2>&1 < /dev/null & fi"
+        )
 
-    fun ensureLocalServer(): Result<Unit> =
-        runCommand("proot-distro login ubuntu -- bash -lc 'command -v ollama >/dev/null 2>&1 || exit 127; if ! pgrep -f \"ollama serve\" >/dev/null 2>&1; then nohup ollama serve >/tmp/ollama.log 2>&1 & fi'")
+    fun ensureLocalServer(): Result<Unit> = startOllama()
 
     fun installUbuntu(): Result<Unit> =
         runCommand("pkg update -y && pkg install -y proot-distro wget curl tar && proot-distro install ubuntu")
@@ -39,10 +50,10 @@ class TermuxController(private val context: Context) {
     fun enterUbuntu(): Result<Unit> = runCommand("proot-distro login ubuntu")
 
     fun installOllama(): Result<Unit> =
-        runCommand("proot-distro login ubuntu -- bash -lc 'curl -fsSL https://ollama.com/install.sh | sh'")
+        runCommand("pkg install -y ollama")
 
     fun pullModel(model: String = "llama3.2:1b"): Result<Unit> =
-        runCommand("proot-distro login ubuntu -- bash -lc 'ollama pull ${shellQuote(model)}'")
+        runCommand("ollama pull ${shellQuote(model)}")
 
     fun buildAndroidProject(projectPath: String): Result<Unit> =
         runCommand("cd ${shellQuote(projectPath)} && test -x ./gradlew && ./gradlew assembleDebug --no-daemon", projectPath)
