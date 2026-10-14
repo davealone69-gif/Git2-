@@ -19,29 +19,37 @@ class TermuxViewModel : ViewModel() {
     fun runUbuntuInstall(context: Context) {
         val controller = TermuxController(context)
         appendLog("Initiating proot Ubuntu installation...")
-        controller.installUbuntu()
-        appendLog("Ubuntu installation script dispatched.")
+        controller.installUbuntu().fold(
+            { appendLog("Ubuntu install command delivered. Check Termux output for actual completion.") },
+            { appendLog("Ubuntu install command failed: ${it.message}") }
+        )
     }
 
     fun runOllamaInstall(context: Context) {
         val controller = TermuxController(context)
-        appendLog("Initiating Ollama setup in Ubuntu...")
-        controller.installOllama()
-        appendLog("Ollama setup script dispatched.")
+        appendLog("Installing Ollama in the Termux environment...")
+        controller.installOllama().fold(
+            { appendLog("Ollama package install command delivered. Confirm installation in Termux output.") },
+            { appendLog("Ollama install command failed: ${it.message}") }
+        )
     }
 
     fun runOllamaStart(context: Context) {
         val controller = TermuxController(context)
-        appendLog("Starting Ollama service...")
-        controller.startOllama()
-        appendLog("Ollama service start command dispatched.")
+        appendLog("Requesting Ollama startup in Termux...")
+        controller.startOllama().fold(
+            { appendLog("Start command delivered. Server readiness and real chat completion still require separate checks.") },
+            { appendLog("Ollama start command failed: ${it.message}") }
+        )
     }
 
-    fun pullModel(context: Context, model: String = "llama3.1") {
+    fun pullModel(context: Context, model: String = "llama3.2:1b") {
         val controller = TermuxController(context)
-        appendLog("Pulling model $model...")
-        controller.pullModel(model)
-        appendLog("Pull script for $model dispatched.")
+        appendLog("Requesting model pull for $model...")
+        controller.pullModel(model).fold(
+            { appendLog("Model pull command delivered. Confirm the model appears in Ollama's model list.") },
+            { appendLog("Model pull command failed: ${it.message}") }
+        )
     }
 
     fun appendLog(message: String) {
