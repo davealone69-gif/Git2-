@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 fun TerminalScreen() {
     val context = LocalContext.current
     val termuxController = remember { com.example.termux.TermuxController(context) }
+    val ollamaClient = remember { OllamaClient() }
+    val scope = rememberCoroutineScope()
     var terminalOutput by remember { mutableStateOf("Termux Controller Initialized.\nReady for commands.\n") }
     val scrollState = rememberScrollState()
 
@@ -64,8 +66,11 @@ fun TerminalScreen() {
 
                 Button(
                     onClick = {
-                        termuxController.installOllama()
-                        terminalOutput += "\n> Sent: installOllama()\n"
+                        val result = termuxController.installOllama()
+                        terminalOutput += "\n> " + result.fold(
+                            { "Install command delivered to Termux. Confirm the package install in Termux output." },
+                            { "Install command failed: ${it.message}" }
+                        ) + "\n"
                     },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -79,8 +84,23 @@ fun TerminalScreen() {
             ) {
                 Button(
                     onClick = {
-                        termuxController.startOllama()
-                        terminalOutput += "\n> Sent: startOllama()\n"
+                        val result = termuxController.startOllama()
+                        terminalOutput += "\n> " + result.fold(
+                            { "Start command delivered. Checking whether Ollama API responds..." },
+                            { "Start command failed: ${it.message}" }
+                        ) + "\n"
+                        if (result.isSuccess) scope.launch {
+                            var ready = false
+                            repeat(20) {
+                                delay(1000)
+                                if (ollamaClient.health().isSuccess) {
+                                    ready = true
+                                    terminalOutput += "\n> SERVER RESPONDS at 127.0.0.1:11434. Chat completion is not verified until a real prompt succeeds.\n"
+                                    return@launch
+                                }
+                            }
+                            if (!ready) terminalOutput += "\n> SERVER NOT VERIFIED: no successful API health response within 20 seconds. Check ~/ollama.log and Termux permission/settings.\n"
+                        }
                     },
                     modifier = Modifier.weight(1f)
                 ) {
