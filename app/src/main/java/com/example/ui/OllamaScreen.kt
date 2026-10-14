@@ -17,6 +17,7 @@ fun OllamaScreen() {
     val ollamaClient = remember { OllamaClient() }
     var prompt by remember { mutableStateOf("") }
     var responseText by remember { mutableStateOf("Enter prompt to generate output.") }
+    var serverStatus by remember { mutableStateOf("Not checked. Server health does not prove chat generation works.") }
     var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -39,19 +40,36 @@ fun OllamaScreen() {
                 minLines = 3
             )
 
-            Button(
-                onClick = {
-                    if (prompt.isNotBlank()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    enabled = !isLoading,
+                    onClick = {
+                        scope.launch {
+                            serverStatus = "Checking Ollama API..."
+                            ollamaClient.health().fold(
+                                onSuccess = { serverStatus = "SERVER RESPONDS · chat completion is not verified until Generate Response succeeds." },
+                                onFailure = { serverStatus = "SERVER UNAVAILABLE · ${it.message ?: "connection failed"}" }
+                            )
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Check Server") }
+                Button(
+                    onClick = {
+                        if (prompt.isNotBlank()) {
                         isLoading = true
                         scope.launch {
                             val result = ollamaClient.generate(prompt)
                             isLoading = false
-                            responseText = result.getOrElse { "Error: ${it.message}" }
+                            responseText = result.fold(
+                                onSuccess = { "CHAT VERIFIED · a real Ollama generation returned a non-empty response.\n\n" + it },
+                                onFailure = { "CHAT FAILED · ${it.message ?: "unknown error"}" }
+                            )
                         }
                     }
                 },
                 enabled = !isLoading && prompt.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.weight(1f)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -60,6 +78,7 @@ fun OllamaScreen() {
                 }
             }
 
+            Text("Server status: $serverStatus", style = MaterialTheme.typography.bodySmall)
             Text("Response:", style = MaterialTheme.typography.titleMedium)
 
             Card(
