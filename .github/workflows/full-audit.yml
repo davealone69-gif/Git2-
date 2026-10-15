@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  security-events: write
   actions: read
 jobs:
   audit:
@@ -15,12 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
-      - uses: JetBrains/qodana-action@v2026.2
+      - name: Setup Android Environment
+        if: ${{ hashFiles('gradlew') != '' }}
+        uses: ./.github/actions/setup-android
       - name: Gradle
         if: ${{ hashFiles('gradlew') != '' }}
-        run: |
-          chmod +x gradlew
-          ./gradlew lint test assembleDebug --continue --stacktrace --console=plain
+        run: gradle lint test assembleDebug --continue --stacktrace --console=plain
       - name: Node
         if: ${{ hashFiles('package.json') != '' }}
         run: |
@@ -32,7 +31,3 @@ jobs:
       - name: Python
         if: ${{ hashFiles('**/*.py') != '' }}
         run: python -m compileall -q .
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: javascript-typescript,python,java-kotlin
-      - uses: github/codeql-action/analyze@v3

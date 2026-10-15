@@ -22,7 +22,7 @@ class OllamaViewModel(
     private val _uiState = MutableStateFlow<OllamaUiState>(OllamaUiState.Idle)
     val uiState: StateFlow<OllamaUiState> = _uiState.asStateFlow()
 
-    fun generate(prompt: String, model: String = "llama3.1") {
+    fun generate(prompt: String, model: String = "llama3.2:1b") {
         if (prompt.isBlank()) return
         _uiState.value = OllamaUiState.Loading
         viewModelScope.launch {
